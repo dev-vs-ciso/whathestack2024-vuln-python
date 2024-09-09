@@ -1,144 +1,20 @@
-<!-- templates/rogue_index.html -->
+<!-- templates/dev_vs_ciso_home.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Send Data to Flask Server</title>
-    <style>
-        /* Simple styles for the menu and result section */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .menu {
-            margin-bottom: 20px;
-        }
-        .menu button {
-            margin-right: 10px;
-            padding: 10px 15px;
-            cursor: pointer;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .result ul {
-            padding-left: 20px;
-        }
-        .result li {
-            margin-bottom: 10px;
-        }
-    </style>
+    <title>Dev-vs-CISO Mediator Server</title>
+    <!-- Include Bootstrap CSS for styling -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Menu section at the top -->
-    <div class="menu">
-        <button onclick="sendDataToFlask()">Send Specific Data to Flask</button>
-        <button onclick="sendAllLocalStorageToServer()">Send All Local Storage Data to Flask</button>
+    <div class="container mt-5">
+        <div class="jumbotron text-center">
+            <h1 class="display-4">Welcome to the Dev-vs-CISO Mediator Server</h1>
+            <hr class="my-4">
+            <p>Send and receive data securely. Always stay compliant and aware of security best practices.</p>
+        </div>
     </div>
-
-    <!-- Result section below the menu -->
-    <div id="result" class="result">
-        <!-- The result from the server will be displayed here -->
-        No data sent yet.
-    </div>
-
-    <!-- JavaScript code to interact with local storage and Flask server -->
-    <script>
-        // Function to send specific data from local storage to Flask server
-        function sendDataToFlask() {
-            // Retrieve specific data from local storage
-            const dataFromLocalStorage = localStorage.getItem('myLocalStorageKey'); // Replace with your key
-
-            // Prepare data to be sent
-            const payload = {
-                localStorageData: dataFromLocalStorage
-            };
-
-            // Send data to Flask server using fetch
-            fetch('/receive-data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Response from server:', data);
-                displayResult(data);
-            })
-            .catch(error => {
-                console.error('Error sending data to Flask server:', error);
-                displayResult({ status: 'error', message: 'Failed to send data to the server' });
-            });
-        }
-
-        // Function to send all local storage data to Flask server
-        function sendAllLocalStorageToServer() {
-            const localStorageData = {};
-            const origin = window.location.origin; // Get the host (origin) where local storage data exists
-
-            // Loop through all local storage items and add them to the object
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i); // Node name
-                const value = localStorage.getItem(key);
-
-                // Collect full information about each local storage item
-                localStorageData[key] = {
-                    node: key, // Store the node name
-                    host: origin, // Store the host (origin) where the data exists
-                    type: typeof value,
-                    length: value ? value.length : 0,
-                    content: value  // Full content
-                };
-            }
-
-            // Send the collected data to the Flask server
-            fetch('/receive-data', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(localStorageData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Response from server:', data);
-                displayResult(data);
-            })
-            .catch(error => {
-                console.error('Error sending data to Flask server:', error);
-                displayResult({ status: 'error', message: 'Failed to send data to the server' });
-            });
-        }
-
-        // Function to display the result received from the server
-        function displayResult(data) {
-            const resultDiv = document.getElementById('result');
-            let resultContent = `<strong>Status:</strong> ${data.status}<br>
-                                 <strong>Message:</strong> ${data.message}<br>
-                                 <strong>X-Forwarded-For IP:</strong> ${data.x_forwarded_for_ip || 'Not available'}<br>
-                                 <strong>Original IP:</strong> ${data.original_ip || 'Not available'}<br>`;
-
-            // Display detailed data if available
-            if (data.details) {
-                resultContent += `<strong>Received Data:</strong><ul>`;
-                for (const [key, info] of Object.entries(data.details)) {
-                    resultContent += `<li><strong>Node Name (Key):</strong> ${info.node}<br>
-                                      <strong>Host (Origin):</strong> ${info.host}<br>
-                                      <strong>Type:</strong> ${info.type}<br>
-                                      <strong>Length:</strong> ${info.length} characters<br>
-                                      <strong>Content:</strong> ${info.content}</li>`;
-                }
-                resultContent += `</ul>`;
-            }
-
-            resultDiv.innerHTML = resultContent;
-        }
-    </script>
 </body>
 </html>
