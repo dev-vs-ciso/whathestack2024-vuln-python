@@ -105,6 +105,12 @@ def admin_required(f):
 def home():
     return render_template('home.html')
 
+@app.route('/search', methods=['GET'])
+def search():
+    # Deliberate XSS: Directly passing user input to the template
+    # This will allow any script in `query` to be executed in the user's browser
+    return render_template('search_results_session_storage.html', query=request.args.get('query'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
