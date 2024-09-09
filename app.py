@@ -1,5 +1,5 @@
 # flask_server.py
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, make_response
 import logging
 
 app = Flask(__name__)
