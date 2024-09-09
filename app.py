@@ -4,6 +4,13 @@ import logging
 
 app = Flask(__name__)
 
+# Add CORS headers
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = 'https://wts2024-session-storage.onrender.com'
+    response.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,8 +21,13 @@ def index():
     return render_template('rogue_index.html')
 
 # Route to receive data from client
-@app.route('/receive-data', methods=['POST'])
+@app.route('/receive-data', methods=['POST', 'OPTIONS'])
 def receive_data():
+    if request.method == 'OPTIONS':
+        # Handle preflight request
+        response = make_response('', 200)
+        return add_cors_headers(response)
+    
     try:
         data = request.get_json(force=True)  # Force parsing JSON, raise error if not valid
         if not data:
