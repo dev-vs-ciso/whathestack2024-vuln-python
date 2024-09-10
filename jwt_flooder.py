@@ -1,3 +1,17 @@
+# This Python script performs multiple HTTP requests through a list of proxies while dynamically varying 
+# the size of a JWT (JSON Web Token) payload with each iteration. The script starts by loading proxy information 
+# from a CSV file and uses a multithreading approach to send HTTP requests concurrently through these proxies.
+# For each iteration, the JWT payload size is doubled, and a new JWT is generated and used for all requests in that iteration.
+# The script collects and prints statistics such as success rates, response times, and HTTP status code distributions 
+# to analyze the performance impact of increasing the JWT payload size on HTTP requests.
+# Key steps of the script include:
+# 1. Generating a JWT token with user details, role, expiration time, and a custom payload.
+# 2. Loading proxy information from a CSV file.
+# 3. Sending HTTP requests with the generated JWT token using proxies.
+# 4. Executing multiple iterations with an increasing payload size.
+# 5. Printing statistical data for each iteration to assess request performance.
+
+
 import csv
 import requests
 import concurrent.futures

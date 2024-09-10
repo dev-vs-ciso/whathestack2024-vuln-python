@@ -9,6 +9,20 @@ from statistics import mean, median, stdev
 from datetime import datetime, timedelta
 import base64
 
+# This Python script performs multiple HTTP requests through a list of proxies while dynamically varying 
+# the size of a JWT (JSON Web Token) payload with each iteration. The script starts by loading proxy information 
+# from a CSV file and uses a multithreading approach to send HTTP requests concurrently through these proxies.
+# For each iteration, the JWT payload size is doubled, and a new JWT is generated and used for all requests in that iteration.
+# The script collects and prints statistics such as success rates, response times, and HTTP status code distributions 
+# to analyze the performance impact of increasing the JWT payload size on HTTP requests.
+# Key steps of the script include:
+# 1. Generating a JWT token with user details, role, expiration time, and a custom payload.
+# 2. Loading proxy information from a CSV file.
+# 3. Sending HTTP requests with the generated JWT token using proxies.
+# 4. Executing multiple iterations with an increasing payload size.
+# 5. Printing statistical data for each iteration to assess request performance.
+
+# List of common User-Agent strings to simulate different browsers or clients
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
@@ -29,17 +43,19 @@ def generate_jwt_cookie(user, role, payload):
     Returns:
     str: JWT token.
     """
-    # Create the JWT header
+    # Create the JWT header with no algorithm ('none') for simplicity
     header = {"alg": "none", "typ": "JWT"}
+    # Encode the header to a base64 URL-safe string
     header_encoded = base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
     
-    # Create the JWT payload
-    exp_time = datetime.utcnow() + timedelta(hours=1)
+    # Create the JWT payload with user information, role, expiry time (exp), and the payload string
+    exp_time = datetime.utcnow() + timedelta(hours=1)  # Expiry set to 1 hour from the current time
     payload_data = {"user": user, "role": role, "exp": int(exp_time.timestamp()), "payload": payload}
 
-    # Print the JWT payload before encoding
+    # Print the JWT payload before encoding for debugging
     # print("JWT Payload (not encoded):", json.dumps(payload_data, indent=4))
     
+    # Encode the payload to a base64 URL-safe string
     payload_encoded = base64.urlsafe_b64encode(json.dumps(payload_data).encode()).decode().rstrip("=")
     
     # Combine header and payload to form the JWT token
@@ -47,11 +63,21 @@ def generate_jwt_cookie(user, role, payload):
     return jwt_token
 
 def load_proxies(file_path):
+    """
+    Load a list of proxies from a CSV file and replace their schemes if needed.
+
+    Args:
+    file_path (str): Path to the CSV file containing proxies.
+
+    Returns:
+    list: List of proxy URLs.
+    """
     proxies = []
     with open(file_path, 'r') as f:
         reader = csv.reader(f)
         for row in reader:
             proxy = row[0]
+            # Replace 'socks4' and 'socks5' schemes with 'socks4h' and 'socks5h' for hostname resolution
             if proxy.startswith('socks4://'):
                 proxy = 'socks4h://' + proxy[8:]
             elif proxy.startswith('socks5://'):
@@ -60,11 +86,23 @@ def load_proxies(file_path):
     return proxies
 
 def send_request(proxy, jwt_token):
+    """
+    Send an HTTP GET request through a specified proxy with a JWT token in the cookies.
+
+    Args:
+    proxy (str): Proxy URL to use for the request.
+    jwt_token (str): JWT token to be sent as a cookie.
+
+    Returns:
+    tuple: (proxy, response_time, status_code) of the request.
+    """
+    # Parse the proxy URL to get its scheme
     parsed = urlparse(proxy)
     proxy_dict = {parsed.scheme: proxy}
     
+    # Set headers to mimic a regular browser request
     headers = {
-        'User-Agent': random.choice(USER_AGENTS),
+        'User-Agent': random.choice(USER_AGENTS),  # Randomly select a User-Agent from the list
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Accept-Encoding': 'gzip, deflate, br',
@@ -80,9 +118,10 @@ def send_request(proxy, jwt_token):
     
     try:
         session = requests.Session()
-        session.headers.update(headers)
+        session.headers.update(headers)  # Set headers for the session
         session.cookies.set("jwt", jwt_token)  # Add JWT token as a cookie
 
+        # Measure the response time for the request
         start_time = time.time()
         response = session.get('https://wts2024-well-protected.onrender.com/', proxies=proxy_dict, timeout=10)
         end_time = time.time()
@@ -94,14 +133,37 @@ def send_request(proxy, jwt_token):
         return proxy, None, None
 
 def run_iteration(proxies, num_threads, num_requests, jwt_token):
+    """
+    Run an iteration of requests using multiple threads.
+
+    Args:
+    proxies (list): List of proxy URLs.
+    num_threads (int): Number of threads to use.
+    num_requests (int): Number of requests to send.
+    jwt_token (str): JWT token to use for all requests.
+
+    Returns:
+    list: List of results from the requests.
+    """
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        # Submit tasks for sending requests concurrently
         futures = [executor.submit(send_request, random.choice(proxies), jwt_token) for _ in range(num_requests)]
         for future in concurrent.futures.as_completed(futures):
             results.append(future.result())
     return results
 
 def print_stats(iteration, num_threads, num_requests, results, payload_size):
+    """
+    Print statistics for a single iteration of requests.
+
+    Args:
+    iteration (int): Current iteration number.
+    num_threads (int): Number of threads used.
+    num_requests (int): Number of requests sent.
+    results (list): List of results from the requests.
+    payload_size (int): Size of the JWT payload.
+    """
     successful_requests = [result for result in results if result[1] is not None]
     
     print(f"\n--- Iteration {iteration} Statistics ---")
@@ -133,12 +195,19 @@ def print_stats(iteration, num_threads, num_requests, results, payload_size):
         print("No successful requests to analyze.")
 
 def main():
-    proxy_file = 'proxies.csv'
+    """
+    Main function to execute the script:
+    - Loads proxies
+    - Iterates over a range, doubling payload size for each iteration
+    - Generates JWT for each iteration
+    - Runs request iterations and prints statistics
+    """
+    proxy_file = 'proxies.csv'  # Path to the file containing proxies
     proxies = load_proxies(proxy_file)
     
-    base_threads = 10
-    base_requests = 50
-    payload_size = 5000
+    base_threads = 10  # Base number of threads to use
+    base_requests = 50  # Base number of requests per iteration
+    payload_size = 5000  # Initial payload size
 
     for i in range(1, 11):
         num_threads = base_threads * i * 2
